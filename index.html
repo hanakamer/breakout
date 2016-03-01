@@ -8,19 +8,45 @@
   <body>
   <canvas id="myCanvas" width="480" height="320"></canvas>
   <script>
+
+
   var canvas = document.getElementById("myCanvas");
   var ctx = canvas.getContext("2d");
   var x = canvas.width/2;
   var y = canvas.height-30;
   var dx = 2;
   var dy = -2;
-  var ballRadius =10;
+  var ballRadius =9;
+  var ballColor = getRandomColor();
+
   var paddleHeight = 10;
   var paddleWidth =75;
   var paddleX = (canvas.width-paddleWidth)/2
 
   var rightPressed = false;
   var leftPressed = false;
+
+  var brickRowCount = 4;
+  var brickColumnCount = 10;
+  var brickWidth = 40;
+  var brickHeight = 20;
+  var brickPadding = 5;
+  var brickOffsetTop = 30;
+  var brickOffsetLeft = 15;
+  var brickColors = ['#ffffe0', '#ffbb82', '#f67863', '#d03548', '#8b0000'];
+  var score = 0;
+  var lives = 3;
+
+  var ballPadding = 25;
+
+
+  var bricks = [];
+  for(c=0; c<brickColumnCount; c++) {
+    bricks[c] = [];
+    for(r=0; r<brickRowCount; r++) {
+      bricks[c][r] = { x: 0, y: 0, status: 1 };
+    }
+  }
 
   function getRandomColor() {
     var letters = '0123456789ABCDEF'.split('');
@@ -34,32 +60,114 @@
   function drawPaddle() {
     ctx.beginPath();
     ctx.rect(paddleX, canvas.height-paddleHeight, paddleWidth, paddleHeight);
-    fillStyle = "#0095DD";
+    ctx.fillStyle = "#8b0000";
     ctx.fill();
     ctx.closePath();
   }
 
-  function drawBall() {
+  function drawBall(x, y, color) {
     ctx.beginPath();
     ctx.arc(x, y, ballRadius, 0, Math.PI*2);
+    ctx.fillStyle = color;
     ctx.fill();
     ctx.closePath();
+  }
+
+  function drawBricks() {
+    for(c=0; c<brickColumnCount; c++) {
+      for(r=0; r<brickRowCount; r++) {
+        if (bricks[c][r].status == 1) {
+          var brickX = (c*(brickWidth+brickPadding))+brickOffsetLeft;
+          var brickY = (r*(brickHeight+brickPadding))+brickOffsetTop;
+          bricks[c][r].x = brickX;
+          bricks[c][r].y = brickY;
+          ctx.beginPath();
+          ctx.rect(brickX, brickY, brickWidth, brickHeight);
+          ctx.fillStyle = brickColors[4-r];
+          ctx.fill();
+          ctx.closePath();
+        }
+      }
+    }
+  }
+
+  function drawHeart() {
+    for ( l=0; l<lives; l++) {
+      var ballX = canvas.width-l*ballPadding-20;
+      var ballY = 15;
+      drawBall(ballX, ballY, "#0095DD");
+    }
   }
 
   function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    drawBall();
-    if (y + dy > canvas.height - ballRadius || y + dy < ballRadius) {
-      ctx.fillStyle = getRandomColor();
+    drawBricks();
+    drawBall(x, y, ballColor);
+    drawPaddle();
+    drawScore();
+    drawHeart();
+    collisionDetection();
+    if (y + dy < ballRadius) {
+      // ctx.fillStyle = getRandomColor();
       dy = -dy;
-
+    } else if (y + dy > canvas.height - ballRadius) {
+      if(x > paddleX && x < paddleX + paddleWidth) {
+        dy = -dy;
+        dy -= 0.01;
+        dx -= 0.01;
+      } else {
+        lives--;
+        if (lives == 0) {
+          alert ("GAME OVER");
+          document.location.reload();
+        } else {
+          x = canvas.width/2;
+          y = canvas.height-30;
+          dx = 3;
+          dy = -3;
+          paddleX = (canvas.width-paddleWidth)/2;
+        }
+      }
     }
     if (x + dx > canvas.width - ballRadius|| x + dx < ballRadius) {
-      ctx.fillStyle = getRandomColor();
+      // ctx.fillStyle = getRandomColor();
       dx = -dx;
+    }
+    if(rightPressed && paddleX < canvas.width-paddleWidth) {
+      paddleX += 7;
+    }
+    else if (leftPressed && paddleX > 0) {
+      paddleX -= 7;
     }
     x += dx;
     y += dy;
+    requestAnimationFrame(draw);
+  }
+
+  function collisionDetection() {
+    for(c=0; c<brickColumnCount; c++) {
+      for (r=0; r<brickRowCount; r++) {
+        var b = bricks[c][r];
+        if (b.status == 1) {
+          if (x > b.x && x < b.x+brickWidth && y > b.y && y < b.y+brickHeight) {
+              dy = -dy;
+              ballColor = getRandomColor();
+              b.status = 0;
+              score++;
+              if (score == brickRowCount*brickColumnCount) {
+                alert("YOU WIN");
+                document.location.reload;
+              }
+          }
+        }
+      }
+    }
+  }
+
+  function drawScore() {
+    ctx.font = "16px Arial";
+    ctx.fillStyle = "#0095DD";
+    ctx.fillText("Score: " + score, 8, 20);
   }
 
   function keyDownHandler(e) {
@@ -84,7 +192,7 @@
   document.addEventListener("keyup", keyUpHandler, false);
 
   // setInterval the draw() function will be called every 10 milliseconds forever
-  setInterval(draw,10);
+  draw();
   </script>
   </body>
 </html>
